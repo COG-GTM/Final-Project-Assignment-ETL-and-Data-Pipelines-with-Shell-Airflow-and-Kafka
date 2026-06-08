@@ -129,7 +129,15 @@ def attach_record_jdbc_sink(stream: DataStream, config: StreamingConfig) -> None
 
 
 def attach_count_jdbc_sink(stream: DataStream, config: StreamingConfig) -> None:
-    """Insert windowed counts into the ``plaza_vehicle_counts`` table."""
+    """Upsert windowed counts into the ``plaza_vehicle_counts`` table.
+
+    With ``allowed_lateness`` the window re-fires when late data arrives, emitting
+    an updated cumulative count for the same (window_start, window_end, plaza_id).
+    Using ``INSERT ... ON DUPLICATE KEY UPDATE`` (requires a unique/primary key on
+    those three columns -- see ``STREAMING.md``) keeps the table idempotent: a
+    re-fired window overwrites the previous count instead of appending a duplicate
+    row.
+    """
     from pyflink.datastream.connectors.jdbc import JdbcSink
 
     projected = stream.map(
@@ -141,7 +149,8 @@ def attach_count_jdbc_sink(stream: DataStream, config: StreamingConfig) -> None:
 
     sql = (
         f"insert into {config.jdbc_counts_table} "
-        "(window_start, window_end, plaza_id, vehicle_count) values (?, ?, ?, ?)"
+        "(window_start, window_end, plaza_id, vehicle_count) values (?, ?, ?, ?) "
+        "on duplicate key update vehicle_count = values(vehicle_count)"
     )
     projected.add_sink(
         JdbcSink.sink(

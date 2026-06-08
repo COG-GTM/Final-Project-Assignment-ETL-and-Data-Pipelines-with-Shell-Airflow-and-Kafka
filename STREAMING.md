@@ -128,7 +128,12 @@ CREATE TABLE plaza_vehicle_counts (
     window_start  DATETIME,
     window_end    DATETIME,
     plaza_id      INT,
-    vehicle_count BIGINT
+    vehicle_count BIGINT,
+    -- Required for the idempotent upsert: with allowed_lateness a window
+    -- re-fires when late data arrives, and the counts sink uses
+    -- INSERT ... ON DUPLICATE KEY UPDATE so the latest count overwrites the
+    -- previous one instead of appending a duplicate row.
+    PRIMARY KEY (window_start, window_end, plaza_id)
 );
 ```
 
