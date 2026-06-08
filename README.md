@@ -30,6 +30,21 @@ As a vehicle passes a toll plaza, the vehicle's data like vehicle_id,vehicle_typ
 - Task 2.8: Run streaming_data_reader.py
 - Task 2.9: Health check of the streaming data pipeline
 
+### Streaming pipeline: Flink job (replaces `streaming_data_reader.py`)
+
+Tasks 2.7–2.9 originally used a standalone `kafka-python` consumer
+(`streaming_data_reader.py`, documented here only via `streaming_reader_code.png`)
+to read the `toll` topic and insert rows into MySQL `livetolldata`.
+
+That consumer has been **replaced by an Apache Flink (PyFlink) streaming job** in
+[`streaming/`](streaming/) that uses Flink's native `flink-connector-kafka`,
+applies an event-time windowed vehicle count per toll plaza, and writes to a
+JDBC (or filesystem) sink with exactly-once checkpointing and late-data handling.
+The Toll Traffic Simulator (producer) is unchanged.
+
+See **[STREAMING.md](STREAMING.md)** for setup, how to run the job, and how to run
+the unit / Flink mini-cluster / end-to-end Kafka tests.
+
 ### How to Submit
 A screenshot in JPEG or PNG format is required to be submitted for each task. The screenshots will be uploaded in the submission step of the final project.
 
