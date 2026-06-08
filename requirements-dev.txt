@@ -1,0 +1,6 @@
+# Development / test dependencies.
+-r requirements.txt
+pytest==8.3.4
+flake8==7.1.1
+# Used by the optional real-broker end-to-end test (tests/test_kafka_e2e.py).
+kafka-python==2.0.2

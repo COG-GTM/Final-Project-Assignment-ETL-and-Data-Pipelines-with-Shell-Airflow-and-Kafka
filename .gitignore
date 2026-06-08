@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Flink connector JARs (downloaded via scripts/download_connectors.sh)
+jars/
+
+# Streaming job output / checkpoints
+output/
+checkpoints/
