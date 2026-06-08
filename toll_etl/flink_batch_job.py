@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import os
 
-from pyflink.common import Row, Types
+from pyflink.common import Row, Types, WatermarkStrategy
 from pyflink.datastream import StreamExecutionEnvironment, RuntimeExecutionMode
 from pyflink.datastream.functions import (
     KeyedProcessFunction,
@@ -112,6 +112,22 @@ class ConsolidateAndTransform(KeyedProcessFunction):
             self.parts_state.clear()
 
 
+def _read_text_lines(env, path: str, source_name: str):
+    """Read a text file as a stream of lines.
+
+    Uses the FileSource API (PyFlink >= 1.16). Each record is a single line
+    with the line terminator stripped.
+    """
+    from pyflink.datastream.connectors.file_system import FileSource, StreamFormat
+
+    source = FileSource.for_record_stream_format(
+        StreamFormat.text_line_format(), path
+    ).build()
+    return env.from_source(
+        source, WatermarkStrategy.no_watermarks(), source_name
+    )
+
+
 def run_batch_job(config: ETLConfig) -> None:
     """Execute the Flink batch ETL pipeline.
 
@@ -129,15 +145,15 @@ def run_batch_job(config: ETLConfig) -> None:
     )
 
     # Read and tag each source
-    csv_tagged = env.read_text_file(config.vehicle_csv_path).map(
-        TagCSVSource(), output_type=tagged_type
-    )
-    tsv_tagged = env.read_text_file(config.tollplaza_tsv_path).map(
-        TagTSVSource(), output_type=tagged_type
-    )
-    fw_tagged = env.read_text_file(config.payment_txt_path).map(
-        TagFWSource(), output_type=tagged_type
-    )
+    csv_tagged = _read_text_lines(
+        env, config.vehicle_csv_path, "vehicle-csv-source"
+    ).map(TagCSVSource(), output_type=tagged_type)
+    tsv_tagged = _read_text_lines(
+        env, config.tollplaza_tsv_path, "tollplaza-tsv-source"
+    ).map(TagTSVSource(), output_type=tagged_type)
+    fw_tagged = _read_text_lines(
+        env, config.payment_txt_path, "payment-fw-source"
+    ).map(TagFWSource(), output_type=tagged_type)
 
     # Union all sources, key by rowid, consolidate + transform
     unioned = csv_tagged.union(tsv_tagged, fw_tagged)
